@@ -1,0 +1,62 @@
+name: Paid DARKROOM evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        type: choice
+        options: [openai, anthropic]
+        required: true
+      model:
+        type: string
+        required: true
+      input_price:
+        type: string
+        required: true
+      output_price:
+        type: string
+        required: true
+      max_cost_usd:
+        type: string
+        default: "0.25"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    environment: paid-evaluations
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e '.[openai,anthropic]'
+      - name: Require selected provider secret
+        env:
+          PROVIDER: ${{ inputs.provider }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ "$PROVIDER" = openai ] && [ -z "$OPENAI_API_KEY" ]; then exit 2; fi
+          if [ "$PROVIDER" = anthropic ] && [ -z "$ANTHROPIC_API_KEY" ]; then exit 2; fi
+      - name: Run bounded evaluation
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: >-
+          python benchmarks/run_darkroom_eval.py
+          --provider '${{ inputs.provider }}'
+          --model '${{ inputs.model }}'
+          --input-price '${{ inputs.input_price }}'
+          --output-price '${{ inputs.output_price }}'
+          --max-cost-usd '${{ inputs.max_cost_usd }}'
+          --output live-eval.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: darkroom-live-eval
+          path: live-eval.json
+          if-no-files-found: warn

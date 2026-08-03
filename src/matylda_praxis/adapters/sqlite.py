@@ -9,6 +9,8 @@ from ..domain.models import HypothesisRecord
 from ..protocol.errors import ConcurrencyConflict
 from .codec import record_from_json, record_to_json
 
+SQLITE_SCHEMA_VERSION = 1
+
 
 class SQLiteArtifactRepository:
     def __init__(self, path: str | Path) -> None:
@@ -19,11 +21,18 @@ class SQLiteArtifactRepository:
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5)
         connection.execute("PRAGMA busy_timeout = 5000")
+        connection.execute("PRAGMA synchronous = FULL")
         return connection
 
     def _initialize(self) -> None:
         with self._connect() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
+            version = int(connection.execute("PRAGMA user_version").fetchone()[0])
+            if version > SQLITE_SCHEMA_VERSION:
+                raise RuntimeError(
+                    f"SQLite schema {version} is newer than supported schema "
+                    f"{SQLITE_SCHEMA_VERSION}"
+                )
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS artifacts (
@@ -34,6 +43,18 @@ class SQLiteArtifactRepository:
                 )
                 """
             )
+            if version < SQLITE_SCHEMA_VERSION:
+                connection.execute(f"PRAGMA user_version = {SQLITE_SCHEMA_VERSION}")
+
+    def integrity_check(self) -> tuple[str, ...]:
+        with self._connect() as connection:
+            rows = connection.execute("PRAGMA integrity_check").fetchall()
+        return tuple(str(row[0]) for row in rows)
+
+    def checkpoint(self) -> tuple[int, int, int]:
+        with self._connect() as connection:
+            row = connection.execute("PRAGMA wal_checkpoint(PASSIVE)").fetchone()
+        return tuple(int(value) for value in row)
 
     def get(self, artifact_id: str) -> HypothesisRecord:
         with self._connect() as connection:

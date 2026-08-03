@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -18,6 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from matylda_praxis.adapters.anthropic import AnthropicHostileReviewer
 from matylda_praxis.adapters.openai import OpenAIHostileReviewer
+from matylda_praxis.adapters.review_json import DARKROOM_SYSTEM, REVIEW_SCHEMA, review_payload
 from matylda_praxis.domain.models import BenchmarkResult, HypothesisArtifact
 from matylda_praxis.evaluation import (
     EvaluationExpectation,
@@ -93,20 +95,24 @@ def extract_usage(provider: str, response: Any) -> tuple[int, int]:
     return int(usage.input_tokens), int(usage.output_tokens)
 
 
-def make_reviewer(provider: str, model: str, max_tokens: int):
+def make_reviewer(provider: str, model: str, max_tokens: int, effort: str | None):
     if provider == "anthropic":
         import anthropic
 
         capture = Capture(anthropic.Anthropic().messages)
         reviewer = AnthropicHostileReviewer(
-            SimpleNamespace(messages=capture), model, max_tokens=max_tokens,
+            SimpleNamespace(messages=capture), model,
+            max_tokens=max_tokens, effort=effort,
         )
         return reviewer, capture
     if provider == "openai":
         import openai
 
         capture = Capture(openai.OpenAI().responses)
-        reviewer = OpenAIHostileReviewer(SimpleNamespace(responses=capture), model)
+        reviewer = OpenAIHostileReviewer(
+            SimpleNamespace(responses=capture), model,
+            max_output_tokens=max_tokens, reasoning_effort=effort,
+        )
         return reviewer, capture
     raise ValueError(f"unsupported provider: {provider}")
 
@@ -125,8 +131,15 @@ def main() -> int:
     )
     parser.add_argument("--max-cases", type=int)
     parser.add_argument("--max-tokens", type=int, default=1600)
+    parser.add_argument("--effort", choices=("low", "medium", "high", "xhigh"))
     parser.add_argument("--input-price", type=float, required=True, help="USD per million tokens")
     parser.add_argument("--output-price", type=float, required=True, help="USD per million tokens")
+    parser.add_argument(
+        "--max-cost-usd",
+        type=float,
+        default=1.0,
+        help="refuse before the first call when a conservative upper bound exceeds this amount",
+    )
     args = parser.parse_args()
 
     key_name = "ANTHROPIC_API_KEY" if args.provider == "anthropic" else "OPENAI_API_KEY"
@@ -141,19 +154,37 @@ def main() -> int:
         if missing:
             parser.error(f"unknown case ids: {', '.join(sorted(missing))}")
     cases = cases[:args.max_cases]
+    if not cases:
+        parser.error("no evaluation cases selected")
+    requests = [build_request(case) for case in cases]
+    input_byte_bound = sum(
+        2 * len((DARKROOM_SYSTEM + review_payload(request)).encode("utf-8")) + 512
+        for request in requests
+    )
+    worst_case_cost = (
+        input_byte_bound * args.input_price
+        + len(cases) * args.max_tokens * args.output_price
+    ) / 1_000_000
+    if worst_case_cost > args.max_cost_usd:
+        parser.error(
+            f"conservative cost bound ${worst_case_cost:.6f} exceeds "
+            f"--max-cost-usd ${args.max_cost_usd:.6f}"
+        )
     results = []
-    for case in cases:
+    for case, request in zip(cases, requests, strict=True):
         expectation = EvaluationExpectation(
             recommendations=tuple(case["expected_recommendations"]),
             objection_concepts=tuple(
                 tuple(group) for group in case["objection_concepts"]
             ),
         )
-        reviewer, capture = make_reviewer(args.provider, args.model, args.max_tokens)
+        reviewer, capture = make_reviewer(
+            args.provider, args.model, args.max_tokens, args.effort,
+        )
         started = time.monotonic()
         raw_review = ""
         try:
-            review = reviewer.review(build_request(case))
+            review = reviewer.review(request)
             latency = time.monotonic() - started
             raw_review = extract_text(args.provider, capture.response)
             input_tokens, output_tokens = extract_usage(args.provider, capture.response)
@@ -204,6 +235,19 @@ def main() -> int:
         "model": args.model,
         "input_usd_per_million": args.input_price,
         "output_usd_per_million": args.output_price,
+        "configuration": {
+            "effort": args.effort or "provider_default",
+            "max_output_tokens": args.max_tokens,
+            "max_cost_usd": args.max_cost_usd,
+            "conservative_cost_bound_usd": worst_case_cost,
+        },
+        "prompt_sha256": hashlib.sha256(json.dumps({
+            "system": DARKROOM_SYSTEM,
+            "schema": REVIEW_SCHEMA,
+        }, sort_keys=True).encode("utf-8")).hexdigest(),
+        "suite_sha256": hashlib.sha256(
+            args.suite.read_bytes()
+        ).hexdigest(),
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "summary": summarize(results),
     }

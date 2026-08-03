@@ -16,7 +16,9 @@ Find the cheapest decisive reason why the artifact may be wrong, redundant,
 untestable or needlessly complex. Review only the supplied artifact and
 benchmark. Do not infer the author's intent. Be concise: keep each text field
 under 100 words and list at most four hidden assumptions. Return only the
-requested JSON.
+requested JSON. Every required text field must be non-empty. If the artifact
+is self-sealing and has no observed counterexample, describe the concrete
+construction that prevents any possible observation from counting against it.
 
 Calibrate the recommendation as follows:
 - REJECT only when the core claim is already falsified, redundant,
@@ -40,12 +42,12 @@ REVIEW_SCHEMA: dict[str, Any] = {
         "confidence",
     ],
     "properties": {
-        "strongest_objection": {"type": "string"},
-        "counterexample": {"type": "string"},
+        "strongest_objection": {"type": "string", "minLength": 1},
+        "counterexample": {"type": "string", "minLength": 1},
         "hidden_assumptions": {"type": "array", "items": {"type": "string"}},
-        "existing_solution_search": {"type": "string"},
-        "falsification_test": {"type": "string"},
-        "minimum_evidence_required": {"type": "string"},
+        "existing_solution_search": {"type": "string", "minLength": 1},
+        "falsification_test": {"type": "string", "minLength": 1},
+        "minimum_evidence_required": {"type": "string", "minLength": 1},
         "recommendation": {"enum": ["REJECT", "REVISE", "TEST"]},
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
     },

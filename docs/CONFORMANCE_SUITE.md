@@ -71,6 +71,16 @@ credits.
 - a complete hypothesis run through the reference API,
 - transport-level enforcement of human confirmation.
 
+`test_mcp_adapter.py`, `test_execution_proof.py` and
+`test_sqlite_recovery.py` additionally verify:
+
+- the MCP catalog exposes proposal but never approval execution,
+- forged, denied, stale and repeated approvals cannot create a decision,
+- OpenAI-shaped and Anthropic-shaped hosts execute the same three histories,
+- provider and trace metadata are not required by the domain codec,
+- committed writes survive abrupt process exit,
+- abandoned SQLite transactions roll back and future schemas fail closed.
+
 ## Provider acceptance rule
 
 A provider adapter is accepted only when it:
@@ -103,12 +113,11 @@ Anthropic run and the defects it exposed.
 
 ## Current limits
 
-- The first live pilot is small and single-sampled; it measures obvious failure
-  modes, not statistical model quality.
-- OpenAI live quality remains unmeasured because no API key was available for
-  the first pilot.
-- SQLite restart durability is tested, but abrupt process termination and
-  filesystem corruption recovery are not yet fault-injected.
+- The repeated live pilot is small; it measures obvious failure modes, not
+  statistical model quality.
+- OpenAI live quality remains unmeasured because no API key was available.
+- Abrupt termination and rollback are tested; destructive filesystem
+  corruption and repair remain an operator concern, not automatic behavior.
 - The local HTTP transport has no authentication and is intentionally bound to
   loopback by default.
 - Semantic duplicate detection remains a future benchmark rather than a

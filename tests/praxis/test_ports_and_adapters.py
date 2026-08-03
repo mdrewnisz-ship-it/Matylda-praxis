@@ -62,6 +62,7 @@ def test_openai_adapter_sends_only_artifact_and_benchmark():
 
     assert result.recommendation is ReviewRecommendation.REVISE
     assert "rationale" not in captured["input"]
+    assert captured["max_output_tokens"] == 1600
     assert set(json.loads(captured["input"])) == {
         "artifact_id", "artifact_version", "artifact", "benchmark",
     }
@@ -82,6 +83,34 @@ def test_anthropic_adapter_uses_the_same_fail_closed_contract():
     assert captured["output_config"]["format"]["type"] == "json_schema"
     assert captured["output_config"]["format"]["schema"]["additionalProperties"] is False
     assert "minimum" not in captured["output_config"]["format"]["schema"]["properties"]["confidence"]
+
+
+def test_provider_adapters_forward_explicit_reasoning_effort():
+    openai_captured = {}
+    anthropic_captured = {}
+
+    class Responses:
+        def create(self, **kwargs):
+            openai_captured.update(kwargs)
+            return SimpleNamespace(output_text=json.dumps(VALID_REVIEW))
+
+    class Messages:
+        def create(self, **kwargs):
+            anthropic_captured.update(kwargs)
+            return SimpleNamespace(content=[SimpleNamespace(
+                type="text", text=json.dumps(VALID_REVIEW),
+            )])
+
+    OpenAIHostileReviewer(
+        SimpleNamespace(responses=Responses()), "test-model",
+        reasoning_effort="low",
+    ).review(review_request())
+    AnthropicHostileReviewer(
+        SimpleNamespace(messages=Messages()), "test-model", effort="low",
+    ).review(review_request())
+
+    assert openai_captured["reasoning"] == {"effort": "low"}
+    assert anthropic_captured["output_config"]["effort"] == "low"
 
     class BrokenMessages:
         def create(self, **kwargs):

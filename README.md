@@ -19,6 +19,8 @@ The first live provider findings are recorded in the
 The current OpenAI/Anthropic capability query and evidence-gated development
 plan are recorded in the
 [platform roadmap](docs/PLATFORM_QUERY_AND_ROADMAP_2026-08-03.md).
+Implementation and verification of phases 10-13 are summarized in the
+[phase report](docs/PHASES_10_13_REPORT_2026-08-04.md).
 
 The runnable surface is documented in the
 [Reference Interface](docs/REFERENCE_INTERFACE.md). Importing selected Lab
@@ -48,6 +50,17 @@ python benchmarks/run_darkroom_eval.py \
   --output-price 10 \
   --output .praxis/evaluations/anthropic-sonnet-5.json
 ```
+
+Install and run the optional local stdio MCP adapter:
+
+```bash
+python -m pip install '.[mcp]'
+matylda-praxis-mcp --database .praxis/praxis.db
+```
+
+The MCP surface lets a model propose a decision but deliberately exposes no
+approval or decision-execution tool. A host process must use the separate,
+single-use `ApprovalBoundary`.
 
 Live evaluation spends provider credits and is intentionally separate from the
 deterministic conformance suite. Pricing is supplied at invocation time so a

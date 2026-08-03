@@ -2,8 +2,9 @@
 
 ## Status
 
-Point 9 is complete: current OpenAI and Anthropic capabilities were reviewed
-against the Praxis product boundary, and the development program was updated.
+Point 9 is complete. Phases 10-13 were implemented on 2026-08-04; exact gate
+status and external blockers are recorded in
+`PHASES_10_13_REPORT_2026-08-04.md`.
 
 The decision is to keep Praxis as a portable epistemic protocol and use model
 platforms as replaceable execution substrates. Praxis will not grow its own
@@ -204,6 +205,7 @@ desktop dashboard merely because provider APIs make it easy.
 
 ## Immediate Next Action
 
-Phase 10 is next. It is deliberately an evaluation task, not an integration
-project. The OpenAI key is the only external prerequisite; the suite, OpenAI
-adapter and cost-aware runner already exist.
+Do not expand the product surface. Complete the missing OpenAI live calibration
+and execution proof when an API credential is available, then repeat the
+hosted-runtime proof only when the account exposes the relevant stable or beta
+API. Phase 14 remains evidence-gated by 20 real protocol runs.

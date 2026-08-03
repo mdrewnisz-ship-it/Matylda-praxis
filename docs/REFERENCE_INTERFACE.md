@@ -90,3 +90,19 @@ POST /hypotheses/{id}/resume
 
 Both interfaces call the same `ReferenceApplication`; transport code cannot
 assign lifecycle state or create a decision outside the domain protocol.
+
+## Local MCP adapter
+
+The optional stdio adapter is installed separately:
+
+```bash
+python -m pip install '.[mcp]'
+matylda-praxis-mcp --database .praxis/praxis.db
+```
+
+It registers nine provider-neutral tools: record inspection, seed capture,
+early transitions, preflight, benchmark, hostile review, deflation and
+decision proposal. `approve` and `decide` are intentionally absent. The model
+cannot supply operator identity, channel or `confirmed_by_human`; a host-only
+`ApprovalBoundary` consumes an unexpired, current-revision proposal exactly
+once. The adapter opens only stdio and does not add a network listener.
