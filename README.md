@@ -16,6 +16,9 @@ See [Praxis Constitution](docs/PRAXIS_CONSTITUTION.md) and
 are defined by the [Conformance Suite](docs/CONFORMANCE_SUITE.md).
 The first live provider findings are recorded in the
 [DARKROOM evaluation report](docs/EVALUATION_REPORT_2026-08-03.md).
+The current OpenAI/Anthropic capability query and evidence-gated development
+plan are recorded in the
+[platform roadmap](docs/PLATFORM_QUERY_AND_ROADMAP_2026-08-03.md).
 
 The runnable surface is documented in the
 [Reference Interface](docs/REFERENCE_INTERFACE.md). Importing selected Lab
