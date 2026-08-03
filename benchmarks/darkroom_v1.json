@@ -1,0 +1,174 @@
+{
+  "suite": "darkroom-v1",
+  "purpose": "Bounded pilot of first-pass hostile-review quality; not a model leaderboard.",
+  "cases": [
+    {
+      "id": "bounded-signal",
+      "artifact": {
+        "claim": "A new reminder layout reduces missed medication confirmations by at least 10% in one clinic.",
+        "scope": "Adult patients using the clinic app during a four-week pilot.",
+        "assumptions": ["Confirmation events are logged reliably."],
+        "evidence_for": ["A 12-person usability pilot showed fewer skipped confirmations."],
+        "evidence_against": ["The pilot had no control group."],
+        "falsification_condition": "The preregistered controlled pilot shows less than a 10% relative reduction.",
+        "next_test": "Randomize 80 eligible patients between the current and new layout.",
+        "exploration_cost": "Two weeks and existing staff time."
+      },
+      "benchmark": {
+        "baseline": "The current layout has a 21% missed-confirmation rate.",
+        "sources": ["clinic-log-2026-q2", "pilot-notes-12-users"],
+        "existing_solution_search": "Compared three reminder-layout studies; none tested this clinic workflow.",
+        "result": "The effect remains uncertain but is bounded and cheaply testable."
+      },
+      "expected_recommendations": ["TEST", "REVISE"],
+      "objection_concepts": [["sample", "control", "random"], ["pilot", "selection", "confound"]]
+    },
+    {
+      "id": "post-hoc-subgroup",
+      "artifact": {
+        "claim": "The intervention improves learning outcomes for all secondary-school students.",
+        "scope": "All secondary-school students.",
+        "assumptions": ["The measured subgroup represents the target population."],
+        "evidence_for": ["One post-hoc subgroup of 14 students improved."],
+        "evidence_against": ["The full 120-student sample showed no significant difference."],
+        "falsification_condition": "A new study finds no population-wide improvement.",
+        "next_test": "Repeat the intervention in another school.",
+        "exploration_cost": "One semester."
+      },
+      "benchmark": {
+        "baseline": "The preregistered primary outcome was null.",
+        "sources": ["study-report-120-students"],
+        "existing_solution_search": "Meta-analyses warn against post-hoc subgroup generalization.",
+        "result": "Only an unplanned small subgroup was positive."
+      },
+      "expected_recommendations": ["REJECT", "REVISE"],
+      "objection_concepts": [["post-hoc", "subgroup"], ["generaliz", "all", "population"], ["null", "primary", "full sample"]]
+    },
+    {
+      "id": "unfalsifiable-flexibility",
+      "artifact": {
+        "claim": "The framework succeeds whenever the analyst interprets the evidence with sufficient openness.",
+        "scope": "Any research domain.",
+        "assumptions": ["Apparent failures indicate insufficient openness."],
+        "evidence_for": ["Several analysts reported useful insights."],
+        "evidence_against": ["Two teams found no benefit."],
+        "falsification_condition": "No result can falsify it because a more open interpretation may reveal success.",
+        "next_test": "Ask another analyst to use it.",
+        "exploration_cost": "One day."
+      },
+      "benchmark": {
+        "baseline": "A useful framework must permit outcomes that count against it.",
+        "sources": ["methodology-handbook-falsifiability"],
+        "existing_solution_search": "Standard preregistration methods already constrain interpretive flexibility.",
+        "result": "The claim protects itself from every negative outcome."
+      },
+      "expected_recommendations": ["REJECT"],
+      "objection_concepts": [["unfals", "cannot be falsified", "no result"], ["circular", "self-seal", "failure"]]
+    },
+    {
+      "id": "known-solution-renamed",
+      "artifact": {
+        "claim": "A novel Dual Copy Safety method prevents partial configuration writes by writing elsewhere before replacement.",
+        "scope": "Single-process configuration files on POSIX systems.",
+        "assumptions": ["Rename is atomic on the target filesystem."],
+        "evidence_for": ["A prototype survived interruption before replacement."],
+        "evidence_against": [],
+        "falsification_condition": "A crash leaves a partially written destination file.",
+        "next_test": "Inject crashes at each write step.",
+        "exploration_cost": "Four hours."
+      },
+      "benchmark": {
+        "baseline": "Write-temp, fsync and atomic rename is a standard established pattern.",
+        "sources": ["POSIX-rename", "SQLite-atomic-commit-notes"],
+        "existing_solution_search": "The proposed steps match the established atomic file replacement pattern.",
+        "result": "The mechanism is useful but the novelty claim is unsupported."
+      },
+      "expected_recommendations": ["REJECT", "REVISE"],
+      "objection_concepts": [["not novel", "novelty", "standard", "existing"], ["rename", "atomic replacement", "temp"]]
+    },
+    {
+      "id": "confounded-observation",
+      "artifact": {
+        "claim": "The new code-review checklist caused the 30% reduction in production incidents.",
+        "scope": "One engineering team over the last quarter.",
+        "assumptions": ["No other process change affected incidents."],
+        "evidence_for": ["Incidents fell after checklist adoption."],
+        "evidence_against": ["Automated integration tests and a release freeze began in the same week."],
+        "falsification_condition": "A comparable period using the checklist shows no reduction.",
+        "next_test": "Compare incident categories before and after adoption.",
+        "exploration_cost": "One day."
+      },
+      "benchmark": {
+        "baseline": "Before-after observations do not isolate simultaneous interventions.",
+        "sources": ["incident-log", "release-calendar", "ci-change-log"],
+        "existing_solution_search": "Interrupted time-series analysis can separate some concurrent effects.",
+        "result": "Three interventions coincide with the observed reduction."
+      },
+      "expected_recommendations": ["REVISE"],
+      "objection_concepts": [["confound", "simultaneous", "concurrent"], ["caus", "attribute", "isolate"]]
+    },
+    {
+      "id": "expensive-discrimination",
+      "artifact": {
+        "claim": "Material X changes phase through mechanism M rather than mechanism N under high pressure.",
+        "scope": "Material X between 70 and 90 GPa at room temperature.",
+        "assumptions": ["The spectrometer calibration remains stable at high pressure."],
+        "evidence_for": ["Existing spectra weakly favor M."],
+        "evidence_against": ["The current resolution cannot distinguish M from N."],
+        "falsification_condition": "A resolved diagnostic peak unique to N is observed.",
+        "next_test": "Collect high-resolution spectra at a national synchrotron.",
+        "exploration_cost": "Six months and a competitive facility allocation."
+      },
+      "benchmark": {
+        "baseline": "M and N make distinct predictions only at higher spectral resolution.",
+        "sources": ["spectra-study-a", "mechanism-n-predictions"],
+        "existing_solution_search": "No published dataset reaches the required resolution for Material X.",
+        "result": "The claim is testable, but the decisive test is expensive."
+      },
+      "expected_recommendations": ["TEST", "REVISE"],
+      "objection_concepts": [["resolution", "distinguish", "discrimin"], ["cost", "expensive", "facility", "allocation"]]
+    },
+    {
+      "id": "contradicted-coherent-story",
+      "artifact": {
+        "claim": "Users finish tasks faster because the animation guides attention to the primary action.",
+        "scope": "The tested desktop workflow.",
+        "assumptions": ["Completion time reflects guided attention."],
+        "evidence_for": ["Interviewees described the animation as clear."],
+        "evidence_against": ["Instrumented tests show animated sessions are 18% slower and have equal error rates."],
+        "falsification_condition": "Animation produces no completion-time improvement.",
+        "next_test": "Run another completion-time study.",
+        "exploration_cost": "Two days."
+      },
+      "benchmark": {
+        "baseline": "The stated benefit is faster completion.",
+        "sources": ["instrumented-ab-test", "interview-notes"],
+        "existing_solution_search": "No external solution is relevant to the direct within-product comparison.",
+        "result": "The direct measure contradicts the claimed direction of effect."
+      },
+      "expected_recommendations": ["REJECT", "REVISE"],
+      "objection_concepts": [["contradict", "slower", "opposite"], ["subjective", "interview", "completion time", "direct measure"]]
+    },
+    {
+      "id": "resource-limit-not-false",
+      "artifact": {
+        "claim": "A three-site replication can distinguish the intervention effect from a site-specific artifact.",
+        "scope": "Three clinics using the same protocol.",
+        "assumptions": ["Sites can implement comparable measurements."],
+        "evidence_for": ["The single-site pilot has a stable moderate effect."],
+        "evidence_against": ["No second site has replicated it."],
+        "falsification_condition": "The pooled preregistered effect includes zero or is driven by one site.",
+        "next_test": "Run the preregistered three-site replication.",
+        "exploration_cost": "Twelve months; current funding covers only one site."
+      },
+      "benchmark": {
+        "baseline": "Single-site effects often fail to generalize.",
+        "sources": ["single-site-pilot", "multisite-methods-review"],
+        "existing_solution_search": "No existing multisite replication was found.",
+        "result": "The hypothesis is testable; the current blocker is funding, not contradictory evidence."
+      },
+      "expected_recommendations": ["TEST", "REVISE"],
+      "objection_concepts": [["site", "generaliz", "replic"], ["fund", "resource", "cost"]]
+    }
+  ]
+}

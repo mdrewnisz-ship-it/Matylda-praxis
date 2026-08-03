@@ -1,0 +1,55 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.praxis/
+*.db-wal
+*.db-shm
+
+# Frozen Lab runtime and private working material. These remain available in
+# the source Lab folder and are not part of the Praxis product repository.
+Matylda Lite.app/
+artifacts/
+data/
+desk/
+homeostasis/
+inbox/
+library/
+logs/
+memory/
+silos/
+darkroom/
+
+# Legacy implementation copied only as migration input.
+src/matylda_lite/
+tests/test_*.py
+tests/__init__.py
+tests/conftest.py
+README_LITE.md
+INSTRUKCJA.md
+requirements.txt
+run.py
+scripts/
+templates/
+prompts/
+
+# Legacy Lab documentation kept only for provenance checks.
+docs/ARCHITECTURE_E2E_REPORT_2026-08-01.md
+docs/MATYLDA_LAB_CHARTER.md
+docs/ROADMAP.md
+docs/assets/
+docs/lite/

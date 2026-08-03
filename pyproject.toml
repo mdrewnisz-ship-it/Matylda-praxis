@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "matylda-praxis"
+version = "0.1.0"
+description = "Portable executable epistemic protocol"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+matylda-praxis = "matylda_praxis.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+openai = ["openai>=1.0"]
+anthropic = ["anthropic>=0.25"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["matylda_praxis*"]

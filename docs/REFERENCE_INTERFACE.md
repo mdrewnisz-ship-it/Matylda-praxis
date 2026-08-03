@@ -1,0 +1,92 @@
+# Matylda Praxis Reference Interface
+
+The reference interface is intentionally small. It exposes one hypothesis
+protocol through a CLI and a local JSON API backed by SQLite. It is not a
+desktop application, agent platform or authentication service.
+
+## Run without installation
+
+```bash
+PYTHONPATH=src python -m matylda_praxis --help
+```
+
+The default database is `.praxis/praxis.db`. Override it with `--db` or the
+`MATYLDA_PRAXIS_DB` environment variable.
+
+## CLI lifecycle
+
+Capture and inspect a seed:
+
+```bash
+PYTHONPATH=src python -m matylda_praxis create "Pilot effect"
+PYTHONPATH=src python -m matylda_praxis list
+PYTHONPATH=src python -m matylda_praxis show HYPOTHESIS_ID
+```
+
+Advance early states:
+
+```bash
+PYTHONPATH=src python -m matylda_praxis advance HYPOTHESIS_ID incubator
+PYTHONPATH=src python -m matylda_praxis advance HYPOTHESIS_ID exploration
+PYTHONPATH=src python -m matylda_praxis advance HYPOTHESIS_ID working --input artifact.json
+```
+
+`artifact.json` uses the fixed hypothesis artifact contract:
+
+```json
+{
+  "claim": "A bounded pilot effect is measurable.",
+  "scope": "One controlled pilot sample.",
+  "assumptions": ["The measurement is stable."],
+  "evidence_for": ["Pilot observation."],
+  "evidence_against": [],
+  "falsification_condition": "No effect in the control sample.",
+  "next_test": "Run one controlled comparison.",
+  "exploration_cost": "30 min"
+}
+```
+
+The remaining commands are:
+
+```text
+preflight HYPOTHESIS_ID
+benchmark HYPOTHESIS_ID --input benchmark.json
+review HYPOTHESIS_ID --input review.json
+deflate HYPOTHESIS_ID --input deflation.json
+decide HYPOTHESIS_ID TEST|WAIT|REJECT|PUBLISH --input decision.json
+resume HYPOTHESIS_ID --input resume.json
+```
+
+The review input contains the fixed hostile-review fields plus the exact
+`benchmark_id`. A decision input must contain `rationale`, `operator_id` and
+`confirmed_by_human: true`, plus fields required by its decision type.
+
+## Local HTTP API
+
+Start the server:
+
+```bash
+PYTHONPATH=src python -m matylda_praxis serve --port 8787
+```
+
+The default host is `127.0.0.1`. The server has no authentication and must not
+be exposed to another network.
+
+Routes:
+
+```text
+GET  /health
+GET  /hypotheses
+POST /hypotheses
+GET  /hypotheses/{id}
+POST /hypotheses/{id}/advance
+POST /hypotheses/{id}/preflight
+POST /hypotheses/{id}/benchmark
+POST /hypotheses/{id}/review
+POST /hypotheses/{id}/deflate
+POST /hypotheses/{id}/decision
+POST /hypotheses/{id}/resume
+```
+
+Both interfaces call the same `ReferenceApplication`; transport code cannot
+assign lifecycle state or create a decision outside the domain protocol.
