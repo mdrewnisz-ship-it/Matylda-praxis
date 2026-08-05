@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Matylda Praxis</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="brand" type="button" data-action="home" aria-label="Matylda Praxis">
+        <span class="brand-mark" aria-hidden="true">&#9879;</span>
+        <span>
+          <strong>Matylda Praxis</strong>
+          <small>Epistemic protocol</small>
+        </span>
+      </button>
+      <div class="system-status">
+        <span id="today"></span>
+        <span class="online-dot" aria-hidden="true"></span>
+        <span id="connection-status">online</span>
+      </div>
+    </header>
+
+    <aside class="sidebar" aria-label="Hipotezy">
+      <div class="sidebar-head">
+        <div>
+          <span class="eyebrow">REJESTR</span>
+          <h1>Hipotezy</h1>
+        </div>
+        <button class="icon-button accent" type="button" data-action="new" title="Nowa hipoteza" aria-label="Nowa hipoteza">+</button>
+      </div>
+      <label class="search-field">
+        <span class="sr-only">Szukaj hipotez</span>
+        <span aria-hidden="true">&#8981;</span>
+        <input id="search" type="search" placeholder="Szukaj">
+      </label>
+      <div class="state-summary" id="state-summary"></div>
+      <div class="hypothesis-list" id="hypothesis-list" role="list"></div>
+      <div class="sidebar-foot">
+        <span>SQLite schema 1</span>
+        <button class="text-button" type="button" data-action="refresh">Odśwież</button>
+      </div>
+    </aside>
+
+    <main class="workspace" id="workspace">
+      <section class="empty-state" id="empty-state">
+        <div class="empty-symbol" aria-hidden="true">&#9879;</div>
+        <p class="eyebrow">MATYLDA PRAXIS</p>
+        <h2>Utwórz pierwszy zapis badawczy</h2>
+        <p>Pomysł zaczyna jako tani seed. Kolejne wymagania pojawią się dopiero wtedy, gdy będą potrzebne.</p>
+        <button class="primary-button" type="button" data-action="new">Nowa hipoteza</button>
+      </section>
+
+      <section class="record-view hidden" id="record-view">
+        <header class="record-header">
+          <div class="record-heading">
+            <div class="record-meta">
+              <span class="status-chip" id="record-state"></span>
+              <span id="record-id"></span>
+            </div>
+            <h2 id="record-title"></h2>
+          </div>
+          <button class="icon-button" type="button" data-action="refresh-record" title="Odśwież zapis" aria-label="Odśwież zapis">&#8635;</button>
+        </header>
+
+        <nav class="lifecycle" id="lifecycle" aria-label="Cykl hipotezy"></nav>
+
+        <div class="tabs" role="tablist" aria-label="Widoki zapisu">
+          <button class="tab active" type="button" role="tab" data-tab="workflow">Przebieg</button>
+          <button class="tab" type="button" role="tab" data-tab="artifact">Artefakt</button>
+          <button class="tab" type="button" role="tab" data-tab="evidence">Dowody</button>
+          <button class="tab" type="button" role="tab" data-tab="history">Historia</button>
+        </div>
+
+        <div class="tab-panel" id="panel-workflow" role="tabpanel"></div>
+        <div class="tab-panel hidden" id="panel-artifact" role="tabpanel"></div>
+        <div class="tab-panel hidden" id="panel-evidence" role="tabpanel"></div>
+        <div class="tab-panel hidden" id="panel-history" role="tabpanel"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="new-dialog">
+    <form method="dialog" id="new-form">
+      <div class="dialog-head">
+        <div>
+          <span class="eyebrow">SEED</span>
+          <h2>Nowa hipoteza</h2>
+        </div>
+        <button class="icon-button" value="cancel" aria-label="Zamknij">&#215;</button>
+      </div>
+      <label>Tytuł lub obserwacja
+        <textarea id="new-title" rows="3" required placeholder="Co zauważyłeś lub o co chcesz zapytać?"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button class="secondary-button" value="cancel">Anuluj</button>
+        <button class="primary-button" type="submit" value="default">Utwórz seed</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

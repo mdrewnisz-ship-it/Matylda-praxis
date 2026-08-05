@@ -22,7 +22,7 @@ plan are recorded in the
 Implementation and verification of phases 10-13 are summarized in the
 [phase report](docs/PHASES_10_13_REPORT_2026-08-04.md).
 
-The runnable surface is documented in the
+The runnable GUI, CLI and integration surfaces are documented in the
 [Reference Interface](docs/REFERENCE_INTERFACE.md). Importing selected Lab
 records is covered by the [Migration Guide](docs/MIGRATION_GUIDE.md).
 
@@ -39,6 +39,15 @@ Run the CLI directly from a checkout:
 ```bash
 PYTHONPATH=src python -m matylda_praxis --help
 ```
+
+Start the local GUI:
+
+```bash
+PYTHONPATH=src python -m matylda_praxis serve --port 8787
+```
+
+Open [http://127.0.0.1:8787/](http://127.0.0.1:8787/). The GUI supports the
+complete hypothesis workflow while preserving all protocol gates.
 
 Run the frozen live DARKROOM pilot with explicit current token prices:
 

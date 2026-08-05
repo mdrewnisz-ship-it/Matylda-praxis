@@ -1,8 +1,8 @@
 # Matylda Praxis Reference Interface
 
 The reference interface is intentionally small. It exposes one hypothesis
-protocol through a CLI and a local JSON API backed by SQLite. It is not a
-desktop application, agent platform or authentication service.
+protocol through a local browser GUI, CLI and JSON API backed by SQLite. It is
+not an agent platform or authentication service.
 
 ## Run without installation
 
@@ -61,7 +61,16 @@ The review input contains the fixed hostile-review fields plus the exact
 `benchmark_id`. A decision input must contain `rationale`, `operator_id` and
 `confirmed_by_human: true`, plus fields required by its decision type.
 
-## Local HTTP API
+`resume` requires a recorded `DecisionMemo` and a new evidential basis. Every
+decision type can start a linked run, because the outcome of a `TEST`, and
+evidence that arrives after `PUBLISH`, are new evidence about the same claim.
+The linked run is a separate record; the parent is never rewritten.
+
+Exit codes: `0` success, `2` invalid input or protocol violation, `3` a
+concurrent write changed the record before this command could commit. Errors
+are printed to stderr as a JSON object, never as a traceback.
+
+## Local GUI and HTTP API
 
 Start the server:
 
@@ -71,6 +80,19 @@ PYTHONPATH=src python -m matylda_praxis serve --port 8787
 
 The default host is `127.0.0.1`. The server has no authentication and must not
 be exposed to another network.
+
+Open `http://127.0.0.1:8787/` for the GUI. It provides:
+
+- hypothesis register, search and seed capture,
+- state-aware next actions from incubator through human decision,
+- working-artifact, preflight, benchmark, DARKROOM and deflation forms,
+- explicit human confirmation for `DecisionMemo`,
+- evidence-chain and immutable event-history views,
+- linked re-entry after any decided run, without rewriting its parent,
+- responsive desktop and narrow-window layouts.
+
+The GUI calls the JSON routes below and does not assign state locally. Invalid
+or out-of-order actions still fail in the application and domain layers.
 
 Routes:
 

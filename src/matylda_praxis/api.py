@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib.resources import files
 from typing import Any, Mapping
 from urllib.parse import unquote, urlsplit
 
@@ -14,6 +15,20 @@ from .application import ReferenceApplication
 from .protocol.errors import ConcurrencyConflict, ProtocolViolation
 
 MAX_BODY_BYTES = 1_000_000
+STATIC_ASSETS = {
+    "/": ("index.html", "text/html; charset=utf-8"),
+    "/app.css": ("app.css", "text/css; charset=utf-8"),
+    "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+}
+
+
+def load_static_asset(path: str) -> tuple[bytes, str] | None:
+    asset = STATIC_ASSETS.get(urlsplit(path).path)
+    if asset is None:
+        return None
+    name, content_type = asset
+    payload = files("matylda_praxis").joinpath("web", name).read_bytes()
+    return payload, content_type
 
 
 def _record(record):
@@ -102,6 +117,11 @@ def make_server(
 
     class Handler(BaseHTTPRequestHandler):
         def _respond(self, method: str) -> None:
+            if method == "GET":
+                asset = load_static_asset(self.path)
+                if asset is not None:
+                    self._write_bytes(200, *asset)
+                    return
             body: Mapping[str, Any] | None = None
             if method == "POST":
                 length = int(self.headers.get("Content-Length", "0"))
@@ -128,6 +148,15 @@ def make_server(
             self.send_header("Content-Length", str(len(encoded)))
             self.end_headers()
             self.wfile.write(encoded)
+
+        def _write_bytes(self, status: int, payload: bytes, content_type: str) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(payload)
 
         def do_GET(self) -> None:  # noqa: N802
             self._respond("GET")

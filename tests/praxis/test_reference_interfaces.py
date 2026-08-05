@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 from matylda_praxis.adapters.sqlite import SQLiteArtifactRepository
-from matylda_praxis.api import ReferenceAPI
+from matylda_praxis.api import ReferenceAPI, load_static_asset
 from matylda_praxis.application import ReferenceApplication
 from matylda_praxis.cli import build_parser, main
 
@@ -40,6 +41,21 @@ REVIEW = {
 
 def api_for(path):
     return ReferenceAPI(ReferenceApplication(SQLiteArtifactRepository(path)))
+
+
+def test_gui_assets_are_packaged_and_use_the_json_transport():
+    index, index_type = load_static_asset("/")
+    script, script_type = load_static_asset("/app.js?version=test")
+    stylesheet, stylesheet_type = load_static_asset("/app.css")
+
+    assert index_type == "text/html; charset=utf-8"
+    assert script_type == "text/javascript; charset=utf-8"
+    assert stylesheet_type == "text/css; charset=utf-8"
+    assert b"Matylda Praxis" in index
+    assert b'fetch(path' in script
+    assert b"/hypotheses" in script
+    assert b".workflow-layout" in stylesheet
+    assert load_static_asset("/not-an-asset") is None
 
 
 def test_reference_api_runs_the_complete_waiting_protocol(tmp_path):
@@ -132,6 +148,26 @@ def test_cli_reports_protocol_errors_without_traceback(tmp_path, capsys):
     assert exit_code == 2
     assert captured.out == ""
     assert "Unknown artifact" in json.loads(captured.err)["error"]
+
+
+def test_cli_reports_a_concurrent_write_without_traceback(tmp_path, capsys, monkeypatch):
+    database = str(tmp_path / "cli.db")
+    assert main(["--db", database, "create", "CLI seed"]) == 0
+    created = json.loads(capsys.readouterr().out)
+
+    fresh = SQLiteArtifactRepository.get
+
+    def stale_read(self, artifact_id):
+        # A second writer committed between this read and its write.
+        return replace(fresh(self, artifact_id), revision=-1)
+
+    monkeypatch.setattr(SQLiteArtifactRepository, "get", stale_read)
+    exit_code = main(["--db", database, "advance", created["id"], "incubator"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 3
+    assert captured.out == ""
+    assert "changed before this write could commit" in json.loads(captured.err)["error"]
 
 
 def test_cli_lab_import_is_dry_run_until_apply(tmp_path, capsys):
