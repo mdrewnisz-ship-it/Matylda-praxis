@@ -210,7 +210,7 @@ function renderWorkflow() {
     html = resumeStep(state);
   } else if (record.decision_memos.length) {
     const memo = record.decision_memos.at(-1);
-    html = workflowShell("DECISION MEMO", `Przebieg zakończony: ${memo.decision}`, "Decyzja jest zapisana i nie może zostać nadpisana. Wynik testu, replikacja lub nowy dowód rozpoczyna powiązany przebieg.", `<div class="notice success">${escapeHTML(memo.rationale)}</div>${resumeForm()}`);
+    html = workflowShell("DECISION MEMO", `Przebieg zakończony: ${memo.decision}`, "Decyzja jest zapisana i nie może zostać nadpisana. Wyniki testu lub publikacji należy zarejestrować w nowym, jawnie utworzonym cyklu badawczym.", `<div class="notice success">${escapeHTML(memo.rationale)}</div><button class="secondary-button" type="button" data-tab-jump="evidence">Zobacz łańcuch dowodowy</button>`);
   } else if (record.state === "seed") {
     html = simpleAdvance("INKUBATOR", "Zatrzymaj pomysł bez rozwijania", "Inkubator przechowuje obserwację, pytanie lub analogię bez żądania pełnej argumentacji.", "incubator", "Przenieś do inkubatora");
   } else if (record.state === "incubator") {
@@ -464,6 +464,11 @@ document.addEventListener("click", async (event) => {
   }
   const advance = event.target.closest("[data-advance]");
   if (advance) return mutate(`/hypotheses/${store.current.id}/advance`, { state: advance.dataset.advance }, `Etap: ${stateLabels[advance.dataset.advance]}`);
+  const tabJump = event.target.closest("[data-tab-jump]");
+  if (tabJump) {
+    store.tab = tabJump.dataset.tabJump;
+    return renderTabs();
+  }
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (action === "new") {
     $("#new-title").value = "";

@@ -88,7 +88,7 @@ Open `http://127.0.0.1:8787/` for the GUI. It provides:
 - working-artifact, preflight, benchmark, DARKROOM and deflation forms,
 - explicit human confirmation for `DecisionMemo`,
 - evidence-chain and immutable event-history views,
-- linked re-entry after any decided run, without rewriting its parent,
+- linked re-entry after `WAIT` or `REJECT`, without rewriting its parent,
 - responsive desktop and narrow-window layouts.
 
 The GUI calls the JSON routes below and does not assign state locally. Invalid
