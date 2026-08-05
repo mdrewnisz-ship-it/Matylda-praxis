@@ -16,6 +16,7 @@ from .adapters.sqlite import SQLiteArtifactRepository
 from .api import serve
 from .application import ReferenceApplication
 from .migration import migrate_legacy_registry
+from .protocol.errors import ConcurrencyConflict
 
 DEFAULT_DATABASE = os.environ.get("MATYLDA_PRAXIS_DB", ".praxis/praxis.db")
 
@@ -143,6 +144,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         _output(result)
         return 0
+    except ConcurrencyConflict as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)
+        return 3
     except (KeyError, OSError, TypeError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)
         return 2
