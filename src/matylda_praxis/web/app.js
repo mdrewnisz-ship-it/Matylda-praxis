@@ -81,9 +81,11 @@ async function loadRecords({ keepSelection = true } = {}) {
       store.current = null;
       renderWorkspace();
     }
+    return true;
   } catch (error) {
     setConnection(false);
     toast(error.message, "error");
+    return false;
   }
 }
 
@@ -101,8 +103,24 @@ async function selectRecord(id, renderLoading = true) {
     store.current = payload.hypothesis;
     renderList();
     renderWorkspace();
+    return true;
   } catch (error) {
     toast(error.message, "error");
+    return false;
+  }
+}
+
+async function withBusyButton(button, task) {
+  if (!button) return task();
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  try {
+    return await task();
+  } finally {
+    if (button.isConnected) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   }
 }
 
@@ -455,6 +473,11 @@ async function submitProtocol(form) {
 }
 
 document.addEventListener("click", async (event) => {
+  const dialogClose = event.target.closest("[data-dialog-close]");
+  if (dialogClose) {
+    dialogClose.closest("dialog")?.close();
+    return;
+  }
   const row = event.target.closest(".hypothesis-row");
   if (row) return selectRecord(row.dataset.id);
   const tab = event.target.closest("[data-tab]");
@@ -469,14 +492,19 @@ document.addEventListener("click", async (event) => {
     store.tab = tabJump.dataset.tabJump;
     return renderTabs();
   }
-  const action = event.target.closest("[data-action]")?.dataset.action;
+  const actionButton = event.target.closest("[data-action]");
+  const action = actionButton?.dataset.action;
   if (action === "new") {
     $("#new-title").value = "";
+    $("#new-title").setCustomValidity("");
     $("#new-dialog").showModal();
+    $("#new-title").focus();
   } else if (action === "refresh") {
-    loadRecords();
+    const loaded = await withBusyButton(actionButton, () => loadRecords());
+    if (loaded) toast("Rejestr odświeżony");
   } else if (action === "refresh-record" && store.current) {
-    selectRecord(store.current.id);
+    const loaded = await withBusyButton(actionButton, () => selectRecord(store.current.id));
+    if (loaded) toast("Zapis odświeżony");
   } else if (action === "home") {
     store.current = null;
     renderList();
@@ -489,10 +517,17 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("submit", async (event) => {
   if (event.target.id === "new-form") {
     event.preventDefault();
-    const title = $("#new-title").value.trim();
-    if (!title) return;
+    const titleInput = $("#new-title");
+    const title = titleInput.value.trim();
+    if (!title) {
+      titleInput.setCustomValidity("Wpisz tytuł lub obserwację.");
+      titleInput.reportValidity();
+      toast("Wpisz tytuł lub obserwację.", "error");
+      return;
+    }
+    const button = event.target.querySelector("button[type=submit]");
     try {
-      const payload = await request("/hypotheses", { method: "POST", body: JSON.stringify({ title }) });
+      const payload = await withBusyButton(button, () => request("/hypotheses", { method: "POST", body: JSON.stringify({ title }) }));
       $("#new-dialog").close();
       toast("Seed utworzony");
       await loadRecords({ keepSelection: false });
@@ -518,6 +553,15 @@ document.addEventListener("submit", async (event) => {
 $("#search").addEventListener("input", (event) => {
   store.query = event.target.value;
   renderList();
+});
+
+$("#new-title").addEventListener("input", (event) => {
+  event.target.setCustomValidity("");
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  event.preventDefault();
+  toast(event.reason?.message || "Akcja nie mogła zostać wykonana.", "error");
 });
 
 $("#today").textContent = new Intl.DateTimeFormat("pl-PL", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());

@@ -52,6 +52,7 @@ def test_gui_assets_are_packaged_and_use_the_json_transport():
     assert script_type == "text/javascript; charset=utf-8"
     assert stylesheet_type == "text/css; charset=utf-8"
     assert b"Matylda Praxis" in index
+    assert index.count(b'type="button" data-dialog-close') == 2
     assert b'fetch(path' in script
     assert b"/hypotheses" in script
     assert b".workflow-layout" in stylesheet
