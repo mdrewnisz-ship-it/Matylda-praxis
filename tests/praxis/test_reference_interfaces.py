@@ -4,6 +4,7 @@ import json
 from dataclasses import replace
 
 from matylda_praxis.adapters.sqlite import SQLiteArtifactRepository
+from matylda_praxis.adapters.review_json import parse_review
 from matylda_praxis.api import ReferenceAPI, load_static_asset
 from matylda_praxis.application import ReferenceApplication
 from matylda_praxis.cli import build_parser, main
@@ -125,6 +126,48 @@ def test_reference_api_rejects_unknown_routes_and_malicious_review(tmp_path):
 
     assert status == 400
     assert payload["ok"] is False
+
+
+def test_reference_api_runs_explicit_openai_review_through_the_same_contract(tmp_path):
+    captured = {}
+
+    class Reviewer:
+        def review(self, request):
+            captured["request"] = request
+            return parse_review(REVIEW)
+
+    api = ReferenceAPI(
+        ReferenceApplication(SQLiteArtifactRepository(tmp_path / "openai.db")),
+        openai_reviewer_factory=Reviewer,
+        openai_model="gpt-test",
+    )
+    artifact_id = api.dispatch("POST", "/hypotheses", {"title": "OpenAI E2E"})[1]["hypothesis"]["id"]
+    for state in ("incubator", "exploration"):
+        assert api.dispatch("POST", f"/hypotheses/{artifact_id}/advance", {"state": state})[0] == 200
+    assert api.dispatch("POST", f"/hypotheses/{artifact_id}/advance", {
+        "state": "working", "artifact": ARTIFACT,
+    })[0] == 200
+    assert api.dispatch("POST", f"/hypotheses/{artifact_id}/preflight", {})[0] == 200
+    benchmark = api.dispatch("POST", f"/hypotheses/{artifact_id}/benchmark", BENCHMARK)[1]["benchmark"]
+
+    status, payload = api.dispatch("POST", f"/hypotheses/{artifact_id}/review/openai", {})
+
+    assert status == 200
+    assert payload["provider"] == "openai"
+    assert payload["model"] == "gpt-test"
+    assert payload["review"]["benchmark_id"] == benchmark["benchmark_id"]
+    assert captured["request"].artifact_id == artifact_id
+
+
+def test_reference_api_reports_unconfigured_openai_without_mutation(tmp_path):
+    api = api_for(tmp_path / "missing-openai.db")
+    artifact_id = api.dispatch("POST", "/hypotheses", {"title": "No provider"})[1]["hypothesis"]["id"]
+
+    status, payload = api.dispatch("POST", f"/hypotheses/{artifact_id}/review/openai", {})
+
+    assert status == 503
+    assert payload == {"ok": False, "error": "OpenAI is not configured"}
+    assert api.application.get(artifact_id).hostile_reviews == ()
 
 
 def test_cli_persists_records_between_independent_invocations(tmp_path, capsys):

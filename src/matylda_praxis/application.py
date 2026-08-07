@@ -7,7 +7,7 @@ from typing import Any, Mapping
 from .adapters.review_json import parse_review
 from .domain.models import ApprovalEvidence, HypothesisArtifact, HypothesisRecord
 from .domain.types import DecisionType, HypothesisState, MemoryClass, RejectionReason
-from .ports.interfaces import ArtifactRepository
+from .ports.interfaces import ArtifactRepository, HostileReviewer, ReviewRequest
 from .protocol.lifecycle import (
     add_benchmark,
     advance,
@@ -100,6 +100,25 @@ class ReferenceApplication:
         record = self.get(artifact_id)
         revision = record.revision
         updated, result = record_hostile_review(record, benchmark_id, draft)
+        self.repository.save(updated, expected_revision=revision)
+        return result
+
+    def review_with(self, artifact_id: str, reviewer: HostileReviewer):
+        record = self.get(artifact_id)
+        revision = record.revision
+        benchmark = next((
+            item for item in reversed(record.benchmark_results)
+            if item.artifact_version == record.current.number
+        ), None)
+        if benchmark is None:
+            raise ValueError("current artifact version has no benchmark")
+        draft = reviewer.review(ReviewRequest(
+            record.id,
+            record.current.number,
+            record.artifact,
+            benchmark,
+        ))
+        updated, result = record_hostile_review(record, benchmark.benchmark_id, draft)
         self.repository.save(updated, expected_revision=revision)
         return result
 

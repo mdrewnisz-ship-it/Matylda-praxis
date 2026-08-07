@@ -5,6 +5,7 @@ const store = {
   current: null,
   tab: "workflow",
   query: "",
+  providers: {},
 };
 
 const stateOrder = ["seed", "incubator", "exploration", "working", "waiting", "cemetery"];
@@ -69,8 +70,9 @@ async function request(path, options = {}) {
 
 async function loadRecords({ keepSelection = true } = {}) {
   try {
-    const payload = await request("/hypotheses");
+    const [payload, health] = await Promise.all([request("/hypotheses"), request("/health")]);
     store.records = payload.hypotheses;
+    store.providers = health.providers || {};
     setConnection(true);
     renderList();
     if (keepSelection && store.current) {
@@ -292,7 +294,16 @@ function benchmarkStep() {
 }
 
 function reviewStep(benchmark) {
+  const provider = store.providers.openai || {};
+  const providerStatus = provider.configured
+    ? `<strong>OpenAI · ${escapeHTML(provider.model)}</strong><span>DARKROOM · ${escapeHTML(provider.reasoning_effort)} · maks. ${escapeHTML(provider.max_output_tokens)} tokenów</span>`
+    : `<strong>OpenAI nie jest skonfigurowane</strong><span>Recenzja ręczna pozostaje dostępna.</span>`;
   return workflowShell("DARKROOM", "Wykonaj obowiązkową próbę obalenia", "Recenzent dostaje artefakt i dokładnie ten benchmark. Nie dostaje uzasadnienia autora ani pożądanego wyniku.", `
+    <div class="provider-action">
+      <div>${providerStatus}</div>
+      <button class="primary-button" type="button" data-action="openai-review" ${provider.configured ? "" : "disabled"}>Uruchom OpenAI</button>
+    </div>
+    <div class="form-separator"><span>lub recenzja ręczna</span></div>
     <form class="protocol-form" data-form="review" data-benchmark="${escapeHTML(benchmark.benchmark_id)}">
       <label>Najsilniejszy zarzut<textarea name="strongest_objection" required></textarea></label>
       <label>Kontrprzykład<textarea name="counterexample" required></textarea></label>
@@ -511,6 +522,16 @@ document.addEventListener("click", async (event) => {
     renderWorkspace();
   } else if (action === "preflight") {
     mutate(`/hypotheses/${store.current.id}/preflight`, {}, "Preflight zakończony");
+  } else if (action === "openai-review" && store.current) {
+    try {
+      await withBusyButton(actionButton, () => mutate(
+        `/hypotheses/${store.current.id}/review/openai`,
+        {},
+        "Recenzja OpenAI zapisana",
+      ));
+    } catch (_) {
+      // mutate already reports the provider or protocol error.
+    }
   }
 });
 

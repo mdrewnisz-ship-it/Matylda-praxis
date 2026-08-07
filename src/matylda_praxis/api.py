@@ -3,18 +3,26 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib.util import find_spec
 from importlib.resources import files
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 from urllib.parse import unquote, urlsplit
 
 from .adapters.codec import record_to_dict, to_jsonable
+from .adapters.openai import OpenAIHostileReviewer
 from .adapters.sqlite import SQLiteArtifactRepository
 from .application import ReferenceApplication
+from .config import load_local_env
+from .ports.interfaces import HostileReviewer
 from .protocol.errors import ConcurrencyConflict, ProtocolViolation
 
 MAX_BODY_BYTES = 1_000_000
+DEFAULT_OPENAI_MODEL = "gpt-5.6-luna"
+OPENAI_MAX_OUTPUT_TOKENS = 1600
+OPENAI_REASONING_EFFORT = "low"
 STATIC_ASSETS = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/app.css": ("app.css", "text/css; charset=utf-8"),
@@ -40,8 +48,16 @@ def _item(value):
 
 
 class ReferenceAPI:
-    def __init__(self, application: ReferenceApplication) -> None:
+    def __init__(
+        self,
+        application: ReferenceApplication,
+        *,
+        openai_reviewer_factory: Callable[[], HostileReviewer] | None = None,
+        openai_model: str = DEFAULT_OPENAI_MODEL,
+    ) -> None:
         self.application = application
+        self.openai_reviewer_factory = openai_reviewer_factory
+        self.openai_model = openai_model
 
     def dispatch(
         self,
@@ -53,7 +69,19 @@ class ReferenceAPI:
             segments = [unquote(item) for item in urlsplit(path).path.split("/") if item]
             data = body or {}
             if method == "GET" and segments == ["health"]:
-                return 200, {"ok": True, "service": "matylda-praxis", "schema_version": 1}
+                return 200, {
+                    "ok": True,
+                    "service": "matylda-praxis",
+                    "schema_version": 1,
+                    "providers": {
+                        "openai": {
+                            "configured": self.openai_reviewer_factory is not None,
+                            "model": self.openai_model,
+                            "reasoning_effort": OPENAI_REASONING_EFFORT,
+                            "max_output_tokens": OPENAI_MAX_OUTPUT_TOKENS,
+                        }
+                    },
+                }
             if segments == ["hypotheses"]:
                 if method == "GET":
                     return 200, {
@@ -69,6 +97,27 @@ class ReferenceAPI:
                 artifact_id = segments[1]
                 if method == "GET" and len(segments) == 2:
                     return 200, {"ok": True, "hypothesis": _record(self.application.get(artifact_id))}
+                if method == "POST" and segments[2:] == ["review", "openai"]:
+                    if self.openai_reviewer_factory is None:
+                        return 503, {"ok": False, "error": "OpenAI is not configured"}
+                    try:
+                        result = self.application.review_with(
+                            artifact_id,
+                            self.openai_reviewer_factory(),
+                        )
+                    except (ConcurrencyConflict, ProtocolViolation, TypeError, ValueError):
+                        raise
+                    except Exception as exc:
+                        return 502, {
+                            "ok": False,
+                            "error": f"OpenAI review failed ({type(exc).__name__})",
+                        }
+                    return 200, {
+                        "ok": True,
+                        "provider": "openai",
+                        "model": self.openai_model,
+                        "review": _item(result),
+                    }
                 if method == "POST" and len(segments) == 3:
                     action = segments[2]
                     if action == "advance":
@@ -113,7 +162,27 @@ def make_server(
     host: str = "127.0.0.1",
     port: int = 8787,
 ) -> ThreadingHTTPServer:
-    api = ReferenceAPI(ReferenceApplication(SQLiteArtifactRepository(database)))
+    load_local_env()
+    openai_model = os.environ.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL).strip()
+    has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+
+    def make_openai_reviewer() -> HostileReviewer:
+        if find_spec("openai") is None:
+            raise RuntimeError("install the openai optional dependency")
+        from openai import OpenAI
+
+        return OpenAIHostileReviewer(
+            OpenAI(),
+            openai_model,
+            max_output_tokens=OPENAI_MAX_OUTPUT_TOKENS,
+            reasoning_effort=OPENAI_REASONING_EFFORT,
+        )
+
+    api = ReferenceAPI(
+        ReferenceApplication(SQLiteArtifactRepository(database)),
+        openai_reviewer_factory=make_openai_reviewer if has_openai else None,
+        openai_model=openai_model,
+    )
 
     class Handler(BaseHTTPRequestHandler):
         def _respond(self, method: str) -> None:

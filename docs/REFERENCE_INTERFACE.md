@@ -94,6 +94,12 @@ Open `http://127.0.0.1:8787/` for the GUI. It provides:
 The GUI calls the JSON routes below and does not assign state locally. Invalid
 or out-of-order actions still fail in the application and domain layers.
 
+When `.env.local` contains `OPENAI_API_KEY`, DARKROOM also exposes one explicit
+OpenAI action. It uses `OPENAI_MODEL` when supplied and otherwise defaults to
+`gpt-5.6-luna`, low reasoning effort and at most 1600 output tokens. No request
+is sent on page load, refresh or lifecycle transitions; only the operator's
+button click invokes the provider. The manual review contract remains available.
+
 Routes:
 
 ```text
@@ -105,6 +111,7 @@ POST /hypotheses/{id}/advance
 POST /hypotheses/{id}/preflight
 POST /hypotheses/{id}/benchmark
 POST /hypotheses/{id}/review
+POST /hypotheses/{id}/review/openai
 POST /hypotheses/{id}/deflate
 POST /hypotheses/{id}/decision
 POST /hypotheses/{id}/resume
